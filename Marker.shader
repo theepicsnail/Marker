@@ -43,7 +43,7 @@ Shader "Snail/Marker"
 			[maxvertexcount(3)]
 			void GS_Main(triangle appdata_full p[3], inout TriangleStream<appdata_full> triStream)
 			{
-				// Vector between each of the 3 points and the camera.
+				/*// Vector between each of the 3 points and the camera.
 				float3 p1 = _WorldSpaceCameraPos.xyz - p[0].vertex;
 				float3 p2 = _WorldSpaceCameraPos.xyz - p[1].vertex;
 				float3 p3 = _WorldSpaceCameraPos.xyz - p[2].vertex;
@@ -54,11 +54,11 @@ Shader "Snail/Marker"
 				// Skip the triangle if it's too far away.
 				if (maxD2 > 100) // 100=10^2 (jump of more than 10m) 
 					return;
-
-				//float tmp = length(p[0].vertex - p[1].vertex);
-				//if (tmp > _MaxDrawLength) return;
-				//tmp = length(p[0].vertex - p[2].vertex);
-				//if (tmp > _MaxDrawLength) return;
+					*/
+				float tmp = length(p[0].vertex - p[1].vertex);
+				if (tmp > 10) return;
+				tmp = length(p[0].vertex - p[2].vertex);
+				if (tmp > 10) return;
 
 				triStream.Append(p[0]);
 				triStream.Append(p[1]);
