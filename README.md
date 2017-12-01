@@ -8,7 +8,4 @@ VRC Marker for presentation room like drawing anywhere
 1.  Doesn't work in the hub.
 2.  Doesn't decay correctly in mirrors.
 
-# Fixed issues:
-
-1.  Only worked near origin
-2.  Red line in avatar testing
+Subscribe to the [change log](https://github.com/theepicsnail/Marker/issues/1) to get notified when an update occurs. 
