@@ -6,4 +6,9 @@ VRC Marker for presentation room like drawing anywhere
 # Known issues:
 
 1.  Doesn't work in the hub.
-1.  Has a red line thing in avatar testing.
+2.  Doesn't decay correctly in mirrors.
+
+# Fixed issues:
+
+1.  Only worked near origin
+2.  Red line in avatar testing
