@@ -17,6 +17,8 @@ Shader "Snail/Marker"
 
 	SubShader
 	{
+		Tags {  "IgnoreProjector" = "True" }
+		Cull Off
 		Pass
 		{
 			Tags{ "RenderType" = "Opaque" }
