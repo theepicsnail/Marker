@@ -1,7 +1,7 @@
 # Marker
 VRC Marker for presentation room like drawing anywhere
 
-[Guide for adding to your avatar](https://docs.google.com/document/d/1dnmJ2Q2Lwq1aPw0jYsgSAro013lJLpCrQWTC6qQkCfM/edit#)
+[Guide for adding to your avatar](https://www.youtube.com/watch?v=Pi7i4sF_BgQ&feature=youtu.be)
 
 # Known issues:
 
