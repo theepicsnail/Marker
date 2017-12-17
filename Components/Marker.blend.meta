@@ -1,6 +1,6 @@
 fileFormatVersion: 2
-guid: b54d6789d690ba04ab15a0ac5b043944
-timeCreated: 1511935933
+guid: 7ae00f559983cc047914ad275e1721bc
+timeCreated: 1513443511
 licenseType: Free
 ModelImporter:
   serializedVersion: 19
@@ -9,9 +9,12 @@ ModelImporter:
     400000: //RootNode
     2300000: //RootNode
     3300000: //RootNode
-    4300000: Cube
+    4300000: Cone
+    4300002: Marker
+    7400000: Default Take
+    9500000: //RootNode
   materials:
-    importMaterials: 1
+    importMaterials: 0
     materialName: 0
     materialSearch: 1
   animations:
