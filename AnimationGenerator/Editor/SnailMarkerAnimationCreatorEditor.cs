@@ -122,21 +122,26 @@ public class SnailMarkerAnimationCreatorEditor : Editor
 
     private void SetupOverrides()
     {
-        AnimatorOverrideController o = new AnimatorOverrideController();
-        o.runtimeAnimatorController = AssetDatabase.LoadAssetAtPath<RuntimeAnimatorController>(TEMPLATE_PATH);
-        AssetDatabase.CreateAsset(o, exportPath + "Overrides.overrideController");
-
         VRCSDK2.VRC_AvatarDescriptor descriptor = avatar.gameObject.GetComponent<VRCSDK2.VRC_AvatarDescriptor>();
-        descriptor.CustomSittingAnims = o;
-        descriptor.CustomStandingAnims = o;
+        if (descriptor.CustomStandingAnims == null)
+        {
+            AnimatorOverrideController o = new AnimatorOverrideController();
+            o.runtimeAnimatorController = AssetDatabase.LoadAssetAtPath<RuntimeAnimatorController>(TEMPLATE_PATH);
+            AssetDatabase.CreateAsset(o, exportPath + "Overrides.overrideController");
+            descriptor.CustomSittingAnims = o;
+            descriptor.CustomStandingAnims = o;
+        }
+        else
+        {
+            Debug.Log("custom override set on CustomStandingAnims, Skipping override controller generation");
+        }
 
-        Selection.activeObject = o;
-        EditorGUIUtility.PingObject(o);
+        Selection.activeObject = descriptor.CustomStandingAnims;
+        EditorGUIUtility.PingObject(descriptor.CustomStandingAnims);
     }
 
     private void Cleanup()
     {
-      
         // Remove this script from the avatar so that VRC is happy.
         DestroyImmediate(obj.gameObject.GetComponent<SnailMarkerAnimationCreator>());
     }
