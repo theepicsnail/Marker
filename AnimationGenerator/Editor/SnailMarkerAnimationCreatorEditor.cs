@@ -1,13 +1,21 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 
 using UnityEngine;
 using UnityEditor;
+using UnityEditor.Animations;
 
 [CustomEditor(typeof(SnailMarkerAnimationCreator))]
 public class SnailMarkerAnimationCreatorEditor : Editor
 {
+#if VRC_SDK_VRCSDK3
+    public static readonly string CONTROLLER_TEMPLATE_PATH = "Assets/Snail/Marker/Components/FX.controller";
+    public static readonly string MENU_TEMPLATE_PATH = "Assets/Snail/Marker/Components/Menu.asset";
+    public static readonly string PARAMETERS_TEMPLATE_PATH = "Assets/Snail/Marker/Components/Parameters.asset";
+#else
     public static readonly string TEMPLATE_PATH = "Assets/VRCSDK/Examples/Sample Assets/Animation/AvatarControllerTemplate.controller";
+#endif
     SnailMarkerAnimationCreator obj;
     public void OnEnable()
     {
@@ -24,6 +32,10 @@ public class SnailMarkerAnimationCreatorEditor : Editor
     Transform avatar = null;
     string animationPath;
     string exportPath;
+#if VRC_SDK_VRCSDK3
+    AnimationClip eraseClip;
+    AnimationClip drawClip;
+#endif
 
     private bool findAvatarAndAnimationPath(Transform cur)
     {
@@ -31,7 +43,11 @@ public class SnailMarkerAnimationCreatorEditor : Editor
         string path = "";
         do
         {
+#if VRC_SDK_VRCSDK3
+            if (cur.GetComponent<VRC.SDK3.Avatars.Components.VRCAvatarDescriptor>() != null)
+#else
             if (cur.GetComponent<VRCSDK2.VRC_AvatarDescriptor>() != null)
+#endif
             {
                 avatar = cur;
                 break;
@@ -89,7 +105,12 @@ public class SnailMarkerAnimationCreatorEditor : Editor
 
         DuplicateMaterial();
         WriteAnimations();
+#if VRC_SDK_VRCSDK3
+        SetupAnimator();
+        SetupExpressions();
+#else
         SetupOverrides();
+#endif
         Cleanup();
     }
 
@@ -120,6 +141,24 @@ public class SnailMarkerAnimationCreatorEditor : Editor
         WriteAsset(draw, exportPath + "Drawing.anim");
     }
 
+#if VRC_SDK_VRCSDK3
+    private void SetupAnimator()
+    {
+        AssetDatabase.CopyAsset(CONTROLLER_TEMPLATE_PATH, exportPath + "FX.controller");
+        var controller = AssetDatabase.LoadAssetAtPath<AnimatorController>(exportPath + "FX.controller");
+        var states = controller.layers[1].stateMachine.states
+            .Select(x => x.state)
+            .ToArray();
+        states.Single(x => x.name == "EraseAll").motion = eraseClip;
+        states.Single(x => x.name == "Drawing").motion = drawClip;
+    }
+
+    private void SetupExpressions()
+    {
+        AssetDatabase.CopyAsset(MENU_TEMPLATE_PATH, exportPath + "Menu.controller");
+        AssetDatabase.CopyAsset(PARAMETERS_TEMPLATE_PATH, exportPath + "Parameters.controller");
+    }
+#else
     private void SetupOverrides()
     {
         VRCSDK2.VRC_AvatarDescriptor descriptor = avatar.gameObject.GetComponent<VRCSDK2.VRC_AvatarDescriptor>();
@@ -139,6 +178,7 @@ public class SnailMarkerAnimationCreatorEditor : Editor
         Selection.activeObject = descriptor.CustomStandingAnims;
         EditorGUIUtility.PingObject(descriptor.CustomStandingAnims);
     }
+#endif
 
     private void Cleanup()
     {
