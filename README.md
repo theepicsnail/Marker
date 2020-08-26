@@ -11,3 +11,8 @@ Marker is now much simpler and supports 3.0!
 4. Follow the instructions at the bottom of the inspector 
 
 Imgur guide: https://imgur.com/a/DcOQFI2
+
+# Contributions
+Very special thank you to [Skuld](https://github.com/chibiskuld/) for helping out!
+
+This has undergone major changes, feel free to contribute bugfixes or file bugs if you find any!
