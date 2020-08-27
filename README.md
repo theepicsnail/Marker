@@ -12,6 +12,8 @@ Marker is now much simpler and supports 3.0!
 
 Imgur guide: https://imgur.com/a/DcOQFI2
 
+Youtube tutorial: https://www.youtube.com/watch?v=1qQeAHo_KaM
+
 # Contributions
 Very special thank you to [Skuld](https://github.com/chibiskuld/) for helping out!
 
