@@ -124,6 +124,7 @@ public class SnailMarker3AnimationCreatorEditor : Editor
                 expressionParams.parameters[i].name.Trim().Length == 0)
             {
                 expressionParams.parameters[i].name = "ToggleMarker";
+                EditorUtility.SetDirty(expressionParams);
                 return;
             }
         }
@@ -140,8 +141,11 @@ public class SnailMarker3AnimationCreatorEditor : Editor
         control.value = 1;
         // control.icon // TODO
         menu.controls.Add(control);
+        //avatarDescriptor.expressionsMenu
+        EditorUtility.SetDirty(avatarDescriptor.expressionsMenu);
+
     }
-    
+
     Transform avatarTransform = null;
     VRCAvatarDescriptor avatarDescriptor = null;
     string animationPath;
