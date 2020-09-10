@@ -113,10 +113,9 @@ public class SnailMarkerAnimationCreatorEditor : Editor
         erase.SetCurve(animationPath, typeof(TrailRenderer), "m_Time", zeroCurve);
         WriteAsset(erase, exportPath + "EraseAll.anim");
 
+        AnimationCurve drawCurve = AnimationCurve.Linear(0, 1, keyframe, 1);
         AnimationClip draw = new AnimationClip();
-        draw.SetCurve(animationPath, typeof(Transform), "m_LocalPosition.x", zeroCurve);
-        draw.SetCurve(animationPath, typeof(Transform), "m_LocalPosition.y", zeroCurve);
-        draw.SetCurve(animationPath, typeof(Transform), "m_LocalPosition.z", zeroCurve);
+        draw.SetCurve(animationPath, typeof(TrailRenderer), "m_Emitting", drawCurve);
         WriteAsset(draw, exportPath + "Drawing.anim");
     }
 
