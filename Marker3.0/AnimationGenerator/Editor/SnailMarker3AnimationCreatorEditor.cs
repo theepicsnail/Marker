@@ -1,4 +1,4 @@
-﻿using System.Collections;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -36,7 +36,6 @@ public class SnailMarker3AnimationCreatorEditor : Editor
 
     public void OnEnable()
     {
-        Debug.Log("OnEnable");
         errorStyle.normal.textColor = Color.red;
         obj = target as SnailMarker3AnimationCreator;
 
@@ -51,17 +50,21 @@ public class SnailMarker3AnimationCreatorEditor : Editor
             return;
         }
 
-        if(fxController == null || expressionParams == null || expressionMenu == null) {
+        if (fxController == null || expressionParams == null || expressionMenu == null)
+        {
             GUILayout.Label("Avatar is missing some 3.0 stuff.");
-            if(GUILayout.Button("Setup 3.0 defaults")) {
+            if (GUILayout.Button("Setup 3.0 defaults"))
+            {
                 ensureDefaults();
             }
-        } else {
+        }
+        else
+        {
             GUILayout.Label("Select a location for the marker:");
             hand = (Hand)EditorGUILayout.EnumPopup("Hand:", hand);
             activateGesture = (VRCGesture)EditorGUILayout.EnumPopup("Activate Gesture:", activateGesture);
             resetGesture = (VRCGesture)EditorGUILayout.EnumPopup("Reset Gesture:", resetGesture);
-            
+
 
             GUILayout.Label("Select a location for the marker:");
             ShowMenuFoldout(avatarDescriptor.expressionsMenu, "Expressions Menu");
@@ -69,33 +72,41 @@ public class SnailMarker3AnimationCreatorEditor : Editor
     }
 
     private HashSet<VRCExpressionsMenu> expandedMenus = new HashSet<VRCExpressionsMenu>();
-    private void ShowMenuFoldout(VRCExpressionsMenu menu, string title) {
-        if(menu == null) return;
+    private void ShowMenuFoldout(VRCExpressionsMenu menu, string title)
+    {
+        if (menu == null) return;
 
         bool b = expandedMenus.Contains(menu);
         // Remove before we go any further, prevents infinite recursion on cyclic menus.
         expandedMenus.Remove(menu);
 
 
-        if(! EditorGUILayout.Foldout(b, title, true)) {
+        if (!EditorGUILayout.Foldout(b, title, true))
+        {
             return;
         }
 
         EditorGUILayout.BeginVertical();
         GUILayout.BeginHorizontal();
         GUILayout.Space(EditorGUI.indentLevel * 17);
-        if(menu.controls.Count < 8) {
-            if(GUILayout.Button("Add Marker Here", GUILayout.Width(130))){
+        if (menu.controls.Count < 8)
+        {
+            if (GUILayout.Button("Add Marker Here", GUILayout.Width(130)))
+            {
                 InstallMarker(ref menu);
             }
-        } else {
-            GUILayout.Label("No room.",  GUILayout.Width(130));
+        }
+        else
+        {
+            GUILayout.Label("No room.", GUILayout.Width(130));
         }
         GUILayout.EndHorizontal();
 
         EditorGUI.indentLevel++;
-        foreach(var child in menu.controls) {
-            if(child.type == ControlType.SubMenu) {
+        foreach (var child in menu.controls)
+        {
+            if (child.type == ControlType.SubMenu)
+            {
                 ShowMenuFoldout(child.subMenu, child.name);
             }
         }
@@ -105,10 +116,10 @@ public class SnailMarker3AnimationCreatorEditor : Editor
         // Okay, it's safe to add the menu back.
         expandedMenus.Add(menu);
     }
-    
+
     //menu in this case is the chosen menu or submenu, in wich to add the marker.
     private void InstallMarker(ref VRCExpressionsMenu menu)
-    {    
+    {
         ConfigureAnimationController();
         AddParameter();
         AddMarkerToMenu(ref menu);
@@ -118,7 +129,7 @@ public class SnailMarker3AnimationCreatorEditor : Editor
 
     private void AddParameter()
     {
-        for(int i = 0; i < expressionParams.parameters.Length; i++)
+        for (int i = 0; i < expressionParams.parameters.Length; i++)
         {
             if (expressionParams.parameters[i].name == "ToggleMarker" ||
                 expressionParams.parameters[i].name.Trim().Length == 0)
@@ -149,7 +160,7 @@ public class SnailMarker3AnimationCreatorEditor : Editor
     Transform avatarTransform = null;
     VRCAvatarDescriptor avatarDescriptor = null;
     string animationPath;
-  
+
     private bool findAvatarAndAnimationPath(Transform cur)
     {
         // Find the avatar root and record the animation path along the way.
@@ -174,7 +185,6 @@ public class SnailMarker3AnimationCreatorEditor : Editor
         if (avatarTransform != null)
         {
             animationPath = path;
-            Debug.Log("Animation path:" + animationPath);
             return true;
         }
 
@@ -185,7 +195,7 @@ public class SnailMarker3AnimationCreatorEditor : Editor
     {
         fxLayer = avatarDescriptor.baseAnimationLayers.Where(layer => layer.type == AnimLayerType.FX).First();
         fxController = fxLayer.animatorController as AnimatorController;
-        
+
         expressionMenu = avatarDescriptor.expressionsMenu;
         expressionParams = avatarDescriptor.expressionParameters;
     }
@@ -193,7 +203,7 @@ public class SnailMarker3AnimationCreatorEditor : Editor
     private void ensureDefaults()
     {
         var obj = new SerializedObject(avatarDescriptor);
-        
+
         obj.FindProperty("customizeAnimationLayers").boolValue = true;
         obj.FindProperty("customExpressions").boolValue = true;
 
@@ -215,14 +225,16 @@ public class SnailMarker3AnimationCreatorEditor : Editor
             layer.FindPropertyRelative("isDefault").boolValue = false;
             break;
         }
-       
+
         var menu = obj.FindProperty("expressionsMenu");
-        if(menu.objectReferenceValue == null) {
+        if (menu.objectReferenceValue == null)
+        {
             menu.objectReferenceValue = CreateAssetFromTemplate<VRCExpressionsMenu>("DefaultMenu.asset");
         }
 
         var parameters = obj.FindProperty("expressionParameters");
-        if(parameters.objectReferenceValue == null) {
+        if (parameters.objectReferenceValue == null)
+        {
             parameters.objectReferenceValue = CreateAssetFromTemplate<VRCExpressionParameters>("DefaultParams.asset");
         }
 
@@ -274,11 +286,15 @@ public class SnailMarker3AnimationCreatorEditor : Editor
         ensureGeneratedDirectory();
         string assetPath = generatedAssetPath(name);
         string templatePath = templateAssetPath(name);
-        AssetDatabase.CopyAsset(templatePath, assetPath);
+        if (!AssetDatabase.CopyAsset(templatePath, assetPath))
+        {
+            Debug.LogError("[Snail] Could not create asset: (" + assetPath + ") from: (" + templatePath + ")");
+        }
         return AssetDatabase.LoadAssetAtPath<T>(assetPath);
     }
 
-    private void ensureGeneratedDirectory() {
+    private void ensureGeneratedDirectory()
+    {
         if (!Directory.Exists(generatedFolderPath()))
         {
             Directory.CreateDirectory(generatedFolderPath());
