@@ -3,27 +3,82 @@ using System.Collections.Generic;
 
 using UnityEngine;
 using UnityEditor;
+using UnityEditor.Animations;
+using VRC.SDKBase;
 
 [CustomEditor(typeof(SnailMarkerAnimationCreator))]
 public class SnailMarkerAnimationCreatorEditor : Editor
 {
     public static readonly string TEMPLATE_PATH = "Assets/VRCSDK/Examples/Sample Assets/Animation/AvatarControllerTemplate.controller";
     SnailMarkerAnimationCreator obj;
+    private GUIStyle errorStyle = new GUIStyle();
+
+    //components required for script
+    private AnimatorController aController;
+    private TrailRenderer trailRenderer;
+    private VRC_AvatarDescriptor avatarDescriptor;
+
+    //animation stuff
+    private AnimationClip eraseClip;
+    private AnimationClip drawClip;
+
+    //Configuration Paramters:
+    public enum Hand { Left, Right }
+    public enum VRCGesture { Fist, HandOpen, FingerPoint, Victory, RockNRoll, HandGun, ThumbsUp }
+    private Hand hand = Hand.Right;
+    private VRCGesture activateGesture = VRCGesture.FingerPoint;
+    private VRCGesture resetGesture = VRCGesture.HandOpen;
+
+    //paths
+    string animationPath;
+    string exportPath;
+
+
     public void OnEnable()
     {
+        errorStyle.normal.textColor = Color.red;
         obj = (SnailMarkerAnimationCreator)target;
+
+        FindComponentsAndSetPaths();
     }
+
+    private void FindComponentsAndSetPaths()
+    {
+        //descriptor and animation path:
+        Transform cur = obj.transform;
+        string path = "";
+        do
+        {
+            if (cur.GetComponent<VRCSDK2.VRC_AvatarDescriptor>() != null)
+            {
+                avatarDescriptor = cur.GetComponent<VRCSDK2.VRC_AvatarDescriptor>();
+                break;
+            }
+            if (path.Length > 0)
+                path = cur.name + "/" + path;
+            else
+                path = cur.name;
+            cur = cur.parent;
+        } while (cur != null);
+
+    }
+    private void SetPaths()
+    {
+
+    }
+
     public override void OnInspectorGUI()
     {
+        if (avatarDescriptor == null)
+        {
+            GUILayout.Label("Could not find VRC Avatar Descriptor on avatar.", errorStyle);
+            return;
+        }
+
         if (!GUILayout.Button("Do everything"))
             return;
         DoEverything();
     }
-
-
-    Transform avatar = null;
-    string animationPath;
-    string exportPath;
 
     private bool findAvatarAndAnimationPath(Transform cur)
     {
@@ -33,7 +88,7 @@ public class SnailMarkerAnimationCreatorEditor : Editor
         {
             if (cur.GetComponent<VRCSDK2.VRC_AvatarDescriptor>() != null)
             {
-                avatar = cur;
+                avatarDescriptor = cur.GetComponent<VRCSDK2.VRC_AvatarDescriptor>();
                 break;
             }
             if(path.Length > 0 )
@@ -43,7 +98,7 @@ public class SnailMarkerAnimationCreatorEditor : Editor
             cur = cur.parent;
         } while (cur != null);
 
-        if (avatar != null)
+        if (avatarDescriptor != null)
         {
             animationPath = path;
             Debug.Log("Animation path:" + animationPath);
@@ -73,13 +128,6 @@ public class SnailMarkerAnimationCreatorEditor : Editor
 
     public void DoEverything()
     {
-        if (!findAvatarAndAnimationPath(obj.transform))
-        {
-            // We need the avatar descriptor for overrides.
-            // Animations are also relative paths from the avatar descriptor.
-            Debug.LogError("Could not find Avatar Descriptor component.");
-        }
-
         if (!getExportPath())
         {
             // We have to write the animation files and overrides somewhere.
@@ -125,7 +173,7 @@ public class SnailMarkerAnimationCreatorEditor : Editor
         o.runtimeAnimatorController = AssetDatabase.LoadAssetAtPath<RuntimeAnimatorController>(TEMPLATE_PATH);
         AssetDatabase.CreateAsset(o, exportPath + "Overrides.overrideController");
 
-        VRCSDK2.VRC_AvatarDescriptor descriptor = avatar.gameObject.GetComponent<VRCSDK2.VRC_AvatarDescriptor>();
+        VRCSDK2.VRC_AvatarDescriptor descriptor = avatarDescriptor.gameObject.GetComponent<VRCSDK2.VRC_AvatarDescriptor>();
         descriptor.CustomSittingAnims = o;
         descriptor.CustomStandingAnims = o;
 
