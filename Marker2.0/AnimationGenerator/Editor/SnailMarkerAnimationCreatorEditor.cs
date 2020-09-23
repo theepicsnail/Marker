@@ -5,6 +5,7 @@ using UnityEngine;
 using UnityEditor;
 using UnityEditor.Animations;
 using VRC.SDKBase;
+using System.IO;
 
 [CustomEditor(typeof(SnailMarkerAnimationCreator))]
 public class SnailMarkerAnimationCreatorEditor : Editor
@@ -14,18 +15,16 @@ public class SnailMarkerAnimationCreatorEditor : Editor
     private GUIStyle errorStyle = new GUIStyle();
 
     //components required for script
-    private AnimatorController aController;
+    private AnimatorOverrideController aController;
     private TrailRenderer trailRenderer;
-    private VRC_AvatarDescriptor avatarDescriptor;
+    private VRCSDK2.VRC_AvatarDescriptor avatarDescriptor;
 
     //animation stuff
-    private AnimationClip eraseClip;
-    private AnimationClip drawClip;
+    private AnimationClip resetClip;
+    private AnimationClip activateClip;
 
     //Configuration Paramters:
-    public enum Hand { Left, Right }
     public enum VRCGesture { Fist, HandOpen, FingerPoint, Victory, RockNRoll, HandGun, ThumbsUp }
-    private Hand hand = Hand.Right;
     private VRCGesture activateGesture = VRCGesture.FingerPoint;
     private VRCGesture resetGesture = VRCGesture.HandOpen;
 
@@ -39,10 +38,10 @@ public class SnailMarkerAnimationCreatorEditor : Editor
         errorStyle.normal.textColor = Color.red;
         obj = (SnailMarkerAnimationCreator)target;
 
-        FindComponentsAndSetPaths();
+        FindAvatarDescriptorAndSetPaths();
     }
 
-    private void FindComponentsAndSetPaths()
+    private void FindAvatarDescriptorAndSetPaths()
     {
         //descriptor and animation path:
         Transform cur = obj.transform;
@@ -61,10 +60,61 @@ public class SnailMarkerAnimationCreatorEditor : Editor
             cur = cur.parent;
         } while (cur != null);
 
+        if (avatarDescriptor != null)
+        {
+            animationPath = path;
+            Debug.Log("Animation path:" + animationPath);
+        }
     }
-    private void SetPaths()
-    {
 
+    private string generatedAssetPath(string name)
+    {
+        return Path.Combine("Assets\\Snail\\Marker2.0\\Generated", avatarDescriptor.name, name);
+    }
+    private string generatedFolderPath()
+    {
+        return Path.Combine(Application.dataPath, "Snail\\Marker2.0\\Generated\\", avatarDescriptor.name);
+    }
+    private string generatedFilePath(string name)
+    {
+        return Path.Combine(generatedFolderPath(), name);
+    }
+    private string templateAssetPath(string name)
+    {
+        return Path.Combine("Assets\\Snail\\Marker2.0\\Templates", name);
+    }
+    private void ensureGeneratedDirectory()
+    {
+        if (!Directory.Exists(generatedFolderPath()))
+        {
+            Directory.CreateDirectory(generatedFolderPath());
+        }
+    }
+    private Object CreateAsset(Object asset, string name)
+    {
+        ensureGeneratedDirectory();
+        string diskFile = generatedFilePath(name);
+        if (File.Exists(diskFile))
+        {
+            if (!EditorUtility.DisplayDialog("Existing files", "Overwrite\n" + diskFile, "Yes", "No"))
+                throw new IOException("Rejected overwriting " + diskFile);
+            Debug.Log("Overwriting " + diskFile);
+        }
+
+        AssetDatabase.CreateAsset(asset, generatedAssetPath(name));
+        return asset;
+    }
+
+    private T CreateAssetFromTemplate<T>(string name) where T : Object
+    {
+        ensureGeneratedDirectory();
+        string assetPath = generatedAssetPath(name);
+        string templatePath = templateAssetPath(name);
+        if (!AssetDatabase.CopyAsset(templatePath, assetPath))
+        {
+            Debug.LogError("[Snail] Could not create asset: (" + assetPath + ") from: (" + templatePath + ")");
+        }
+        return AssetDatabase.LoadAssetAtPath<T>(assetPath);
     }
 
     public override void OnInspectorGUI()
@@ -75,115 +125,101 @@ public class SnailMarkerAnimationCreatorEditor : Editor
             return;
         }
 
-        if (!GUILayout.Button("Do everything"))
+        activateGesture = (VRCGesture)EditorGUILayout.EnumPopup("Activate Gesture:", activateGesture);
+        resetGesture = (VRCGesture)EditorGUILayout.EnumPopup("Reset Gesture:", resetGesture);
+
+        if (GUILayout.Button("Do everything"))
+        {
+            DoEverything();
             return;
-        DoEverything();
-    }
-
-    private bool findAvatarAndAnimationPath(Transform cur)
-    {
-        // Find the avatar root and record the animation path along the way.
-        string path = "";
-        do
-        {
-            if (cur.GetComponent<VRCSDK2.VRC_AvatarDescriptor>() != null)
-            {
-                avatarDescriptor = cur.GetComponent<VRCSDK2.VRC_AvatarDescriptor>();
-                break;
-            }
-            if(path.Length > 0 )
-                path = cur.name + "/" + path;
-            else
-                path = cur.name;
-            cur = cur.parent;
-        } while (cur != null);
-
-        if (avatarDescriptor != null)
-        {
-            animationPath = path;
-            Debug.Log("Animation path:" + animationPath);
-            return true;
         }
-        return false;
+        
     }
-
-    private bool getExportPath()
-    {
-        exportPath = EditorUtility.OpenFolderPanel("Save Generated Animations", "", "");
-        // "c:/Users/snail/Downloads/VR Chat/Assets/Snail/Marker";
-
-        if (exportPath.Length == 0)
-            return false;
-        int pathSplitPos = exportPath.IndexOf("/Assets");
-        if (pathSplitPos == -1)
-        {
-            Debug.LogError("'/Assets' not found in path. Export path needs to be inside your project.");
-            return false;
-        }
-        // Make exportPath have the form "Assets/..../"
-        exportPath = exportPath.Substring(pathSplitPos + 1) + "/";
-        return true;
-    }
-
 
     public void DoEverything()
     {
-        if (!getExportPath())
-        {
-            // We have to write the animation files and overrides somewhere.
-            Debug.LogError("Could not get a valid export path.");
-            return;
-        }
-
-        DuplicateMaterial();
-        WriteAnimations();
-        SetupOverrides();
+        ensureGeneratedDirectory();
+        SetAnimationController();
+        SetAnimations();
         Cleanup();
     }
 
-    private void DuplicateMaterial()
+    private void SetAnimationController()
     {
-        // Duplicating the material so that the user can have different colors
-        // across different instances of the marker.
-        string materialPath = exportPath + "Ink.mat";
-        TrailRenderer r = obj.gameObject.GetComponent<TrailRenderer>();
-        WriteAsset(r.material, materialPath);
-        r.material = AssetDatabase.LoadAssetAtPath<Material>(materialPath);
+        if (avatarDescriptor.CustomStandingAnims != null)
+        {
+            aController = avatarDescriptor.CustomStandingAnims;
+        } else
+        {
+            aController = CreateAssetFromTemplate<AnimatorOverrideController>("overrides.overrideController");
+            avatarDescriptor.CustomStandingAnims = aController;
+        }
     }
 
-    private void WriteAnimations()
+    private AnimationClip GetOrSetAnimation( AnimationClip clip, string name )
     {
-        float keyframe = 1F / 60;
-        // Curve that sets a property to 0 over the course of 1 frame.
-        AnimationCurve zeroCurve = AnimationCurve.Linear(0, 0, keyframe, 0);
-        zeroCurve.AddKey(new Keyframe(keyframe, 0));
-        AnimationClip erase = new AnimationClip();
-        erase.SetCurve(animationPath, typeof(TrailRenderer), "m_Time", zeroCurve);
-        WriteAsset(erase, exportPath + "EraseAll.anim");
-
-        AnimationCurve drawCurve = AnimationCurve.Linear(0, 1, keyframe, 1);
-        AnimationClip draw = new AnimationClip();
-        draw.SetCurve(animationPath, typeof(TrailRenderer), "m_Emitting", drawCurve);
-        WriteAsset(draw, exportPath + "Drawing.anim");
+        if (clip==null)
+        {
+            clip = CreateAssetFromTemplate<AnimationClip>(name + ".anim");
+        }
+        return clip;
     }
 
-    private void SetupOverrides()
+    private void SetAnimations()
     {
-        AnimatorOverrideController o = new AnimatorOverrideController();
-        o.runtimeAnimatorController = AssetDatabase.LoadAssetAtPath<RuntimeAnimatorController>(TEMPLATE_PATH);
-        AssetDatabase.CreateAsset(o, exportPath + "Overrides.overrideController");
+        List<KeyValuePair<AnimationClip, AnimationClip>> overrides = new List<KeyValuePair<AnimationClip, AnimationClip>>();
+        aController.GetOverrides(overrides);
+        KeyValuePair<AnimationClip, AnimationClip> activatePair;
+        int activatePairIndex = 0;
+        KeyValuePair<AnimationClip, AnimationClip> resetPair;
+        int resetPairIndex = 0;
 
-        VRCSDK2.VRC_AvatarDescriptor descriptor = avatarDescriptor.gameObject.GetComponent<VRCSDK2.VRC_AvatarDescriptor>();
-        descriptor.CustomSittingAnims = o;
-        descriptor.CustomStandingAnims = o;
+        foreach ( KeyValuePair<AnimationClip,AnimationClip> anim in overrides)
+        {
+            if (activateGesture.ToString().ToUpper() == anim.Key.name)
+            {
+                activatePair = anim;
+                activatePairIndex = overrides.IndexOf(anim);
+            }
+            if (resetGesture.ToString().ToUpper() == anim.Key.name)
+            {
+                resetPair = anim;
+                resetPairIndex = overrides.IndexOf(anim);
+            }
+        }
 
-        Selection.activeObject = o;
-        EditorGUIUtility.PingObject(o);
+        activateClip = GetOrSetAnimation(activatePair.Value, activateGesture.ToString());
+        resetClip = GetOrSetAnimation(activatePair.Value, resetGesture.ToString());
+        //activate Clip and 
+        ModifyActivateClip();
+        ModifyResetClip();
+
+        activatePair = new KeyValuePair<AnimationClip, AnimationClip>(activatePair.Key, activateClip);
+        resetPair = new KeyValuePair<AnimationClip, AnimationClip>(resetPair.Key, resetClip);
+
+        overrides[activatePairIndex] = activatePair;
+        overrides[resetPairIndex] = resetPair;
+        
+        aController.ApplyOverrides(overrides);
+    }
+
+    private void ModifyActivateClip()
+    {
+        float keyframe = 1.0f / activateClip.frameRate;
+        AnimationCurve curve = AnimationCurve.Linear(0, 1, keyframe, 1);
+        activateClip.SetCurve(animationPath, typeof(TrailRenderer), "m_Emitting", curve);
+        EditorUtility.SetDirty(activateClip);
+    }
+    private void ModifyResetClip()
+    {
+        float keyframe = 1.0f / resetClip.frameRate;
+        AnimationCurve curve = AnimationCurve.Linear(0, 0, keyframe, 0);
+        resetClip.SetCurve(animationPath, typeof(TrailRenderer), "m_Time", curve);
+        EditorUtility.SetDirty(resetClip);
     }
 
     private void Cleanup()
-    {
-      
+    { 
         // Remove this script from the avatar so that VRC is happy.
         DestroyImmediate(obj.gameObject.GetComponent<SnailMarkerAnimationCreator>());
     }
