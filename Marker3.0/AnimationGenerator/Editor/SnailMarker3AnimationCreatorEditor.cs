@@ -65,7 +65,6 @@ public class SnailMarker3AnimationCreatorEditor : Editor
             activateGesture = (VRCGesture)EditorGUILayout.EnumPopup("Activate Gesture:", activateGesture);
             resetGesture = (VRCGesture)EditorGUILayout.EnumPopup("Reset Gesture:", resetGesture);
 
-
             GUILayout.Label("Select a location for the marker:");
             ShowMenuFoldout(avatarDescriptor.expressionsMenu, "Expressions Menu");
         }
@@ -193,8 +192,22 @@ public class SnailMarker3AnimationCreatorEditor : Editor
 
     private void findComponents()
     {
+        /*
         fxLayer = avatarDescriptor.baseAnimationLayers.Where(layer => layer.type == AnimLayerType.FX).First();
         fxController = fxLayer.animatorController as AnimatorController;
+        */
+        var obj = new SerializedObject(avatarDescriptor);
+        var baseAnimationLayers = obj.FindProperty("baseAnimationLayers.Array");
+        var size = baseAnimationLayers.arraySize;
+        for (int i = 0; i < size; i++)
+        {
+            var layer = baseAnimationLayers.GetArrayElementAtIndex(i);
+            if ((AnimLayerType)(layer.FindPropertyRelative("type").enumValueIndex) != AnimLayerType.FX)
+                continue;
+
+            var controllerProp = layer.FindPropertyRelative("animatorController");
+            fxController = controllerProp.objectReferenceValue as AnimatorController;
+        }
 
         expressionMenu = avatarDescriptor.expressionsMenu;
         expressionParams = avatarDescriptor.expressionParameters;
@@ -393,8 +406,8 @@ public class SnailMarker3AnimationCreatorEditor : Editor
                     transition = layer.stateMachine.AddAnyStateTransition(idleState);
                 }
                 transition.AddCondition(AnimatorConditionMode.Equals, i, generatedGestureName());
-                transition.hasExitTime = true;
-                transition.hasFixedDuration = true;
+                transition.hasExitTime = false;
+                transition.hasFixedDuration = false;
                 transition.duration = .1f;
                 transition.interruptionSource = TransitionInterruptionSource.Destination;
                 transition.canTransitionToSelf = false;
