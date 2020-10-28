@@ -192,10 +192,6 @@ public class SnailMarker3AnimationCreatorEditor : Editor
 
     private void findComponents()
     {
-        /*
-        fxLayer = avatarDescriptor.baseAnimationLayers.Where(layer => layer.type == AnimLayerType.FX).First();
-        fxController = fxLayer.animatorController as AnimatorController;
-        */
         var obj = new SerializedObject(avatarDescriptor);
         var baseAnimationLayers = obj.FindProperty("baseAnimationLayers.Array");
         var size = baseAnimationLayers.arraySize;
