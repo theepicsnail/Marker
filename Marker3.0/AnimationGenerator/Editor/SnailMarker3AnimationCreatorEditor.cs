@@ -256,7 +256,7 @@ public class SnailMarker3AnimationCreatorEditor : Editor
 
     private string generatedAssetPath(string name)
     {
-        return Path.Combine("Assets\\Snail\\Marker3.0\\Generated", avatarTransform.name, name);
+        return Path.Combine("Assets","Snail","Marker3.0","Generated", avatarTransform.name, name);
     }
     private string generatedFilePath(string name)
     {
@@ -264,11 +264,11 @@ public class SnailMarker3AnimationCreatorEditor : Editor
     }
     private string generatedFolderPath()
     {
-        return Path.Combine(Application.dataPath, "Snail\\Marker3.0\\Generated\\", avatarDescriptor.name);
+        return Path.Combine(Application.dataPath, "Snail","Marker3.0","Generated", avatarDescriptor.name);
     }
     private string templateAssetPath(string name)
     {
-        return Path.Combine("Assets\\Snail\\Marker3.0\\Templates", name);
+        return Path.Combine("Assets","Snail","Marker3.0","Templates", name);
     }
     private string generatedGestureName()
     {
