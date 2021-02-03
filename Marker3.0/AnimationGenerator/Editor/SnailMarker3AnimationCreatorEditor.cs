@@ -88,7 +88,15 @@ public class SnailMarker3AnimationCreatorEditor : Editor
         EditorGUILayout.BeginVertical();
         GUILayout.BeginHorizontal();
         GUILayout.Space(EditorGUI.indentLevel * 17);
-        if (menu.controls.Count < 8)
+        Debug.Log(expressionParams.parameters.Length+":"+ menu.controls.Count);
+
+        int size = 0;
+        for (int i = 0; i < expressionParams.parameters.Length; i++)
+        {
+            size += VRCExpressionParameters.TypeCost(expressionParams.parameters[i].valueType);
+        }
+
+        if ( menu.controls.Count < expressionParams.parameters.Length )
         {
             if (GUILayout.Button("Add Marker Here", GUILayout.Width(130)))
             {
@@ -97,7 +105,27 @@ public class SnailMarker3AnimationCreatorEditor : Editor
         }
         else
         {
-            GUILayout.Label("No room.", GUILayout.Width(130));
+            if (size < VRCExpressionParameters.MAX_PARAMETER_COST)
+            {
+                if (GUILayout.Button("enlarge parameters", GUILayout.Width(130)))
+                {
+                    if (size < VRCExpressionParameters.MAX_PARAMETER_COST)
+                    {
+                        VRCExpressionParameters.Parameter[] newParams = new VRCExpressionParameters.Parameter[expressionParams.parameters.Length + 1];
+                        for (int i = 0; i < expressionParams.parameters.Length; i++)
+                        {
+                            newParams[i] = expressionParams.parameters[i];
+                        }
+
+                        expressionParams.parameters = newParams;
+                        EditorUtility.SetDirty(expressionParams);
+                    }
+                }
+            }
+            else
+            {
+                GUILayout.Label("No room.", GUILayout.Width(130));
+            }
         }
         GUILayout.EndHorizontal();
 
@@ -256,7 +284,7 @@ public class SnailMarker3AnimationCreatorEditor : Editor
 
     private string generatedAssetPath(string name)
     {
-        return Path.Combine("Assets","Snail","Marker3.0","Generated", avatarTransform.name, name);
+        return Path.Combine("Assets\\Snail\\Marker3.0\\Generated", avatarTransform.name, name);
     }
     private string generatedFilePath(string name)
     {
@@ -264,11 +292,11 @@ public class SnailMarker3AnimationCreatorEditor : Editor
     }
     private string generatedFolderPath()
     {
-        return Path.Combine(Application.dataPath, "Snail","Marker3.0","Generated", avatarDescriptor.name);
+        return Path.Combine(Application.dataPath, "Snail\\Marker3.0\\Generated\\", avatarDescriptor.name);
     }
     private string templateAssetPath(string name)
     {
-        return Path.Combine("Assets","Snail","Marker3.0","Templates", name);
+        return Path.Combine("Assets\\Snail\\Marker3.0\\Templates", name);
     }
     private string generatedGestureName()
     {
@@ -319,7 +347,7 @@ public class SnailMarker3AnimationCreatorEditor : Editor
     /*******************************
     * Animations
     *******************************/
-    private void ConfigureAnimationController()
+                private void ConfigureAnimationController()
     {
         //Check and build the animation controller:
         CreateParameters();
