@@ -116,7 +116,7 @@ public class SnailMarker3AnimationCreatorEditor : Editor
                         {
                             newParams[i] = expressionParams.parameters[i];
                         }
-
+                        newParams[expressionParams.parameters.Length] = new VRCExpressionParameters.Parameter();
                         expressionParams.parameters = newParams;
                         EditorUtility.SetDirty(expressionParams);
                     }
