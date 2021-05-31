@@ -22,10 +22,17 @@ public class SnailMarker3AnimationCreatorEditor : Editor
     private VRCExpressionParameters expressionParams;
 
     //animation stuff
-    private AnimationClip eraseClip;
-    private AnimationClip drawClip;
+    private AnimationClip idleClip;
+    private AnimationClip eraseOnClip;
+    private AnimationClip drawOnClip;
     private AnimationClip toggleOnClip;
     private AnimationClip toggleOffClip;
+
+    //paths:
+    private string scriptPath = "Assets\\Snail\\Marker3.0\\AnimationGenerator\\Editor";
+    private string rootPath = "Assets\\Snail\\Marker3.0\\";
+    private string generatedPath = "Assets\\Snail\\Marker3.0\\Generated\\";
+    private string templatesPath = "Assets\\Snail\\Marker3.0\\Templates\\";
 
     //Configuration Paramters:
     public enum Hand { Left, Right }
@@ -55,6 +62,7 @@ public class SnailMarker3AnimationCreatorEditor : Editor
             GUILayout.Label("Avatar is missing some 3.0 stuff.");
             if (GUILayout.Button("Setup 3.0 defaults"))
             {
+                updatePaths();
                 ensureDefaults();
             }
         }
@@ -88,7 +96,6 @@ public class SnailMarker3AnimationCreatorEditor : Editor
         EditorGUILayout.BeginVertical();
         GUILayout.BeginHorizontal();
         GUILayout.Space(EditorGUI.indentLevel * 17);
-        Debug.Log(expressionParams.parameters.Length+":"+ menu.controls.Count);
 
         int size = 0;
         for (int i = 0; i < expressionParams.parameters.Length; i++)
@@ -100,6 +107,7 @@ public class SnailMarker3AnimationCreatorEditor : Editor
         {
             if (GUILayout.Button("Add Marker Here", GUILayout.Width(130)))
             {
+                updatePaths();
                 InstallMarker(ref menu);
             }
         }
@@ -109,6 +117,7 @@ public class SnailMarker3AnimationCreatorEditor : Editor
             {
                 if (GUILayout.Button("enlarge parameters", GUILayout.Width(130)))
                 {
+                    updatePaths();
                     if (size < VRCExpressionParameters.MAX_PARAMETER_COST)
                     {
                         VRCExpressionParameters.Parameter[] newParams = new VRCExpressionParameters.Parameter[expressionParams.parameters.Length + 1];
@@ -162,6 +171,7 @@ public class SnailMarker3AnimationCreatorEditor : Editor
                 expressionParams.parameters[i].name.Trim().Length == 0)
             {
                 expressionParams.parameters[i].name = "ToggleMarker";
+                expressionParams.parameters[i].valueType = VRCExpressionParameters.ValueType.Bool;
                 EditorUtility.SetDirty(expressionParams);
                 return;
             }
@@ -281,22 +291,29 @@ public class SnailMarker3AnimationCreatorEditor : Editor
         OnEnable();
     }
 
+    /*******************************
+     * Path and Asset Generation.
+    *******************************/
+    private void updatePaths()
+    {
+        MonoScript ms = MonoScript.FromScriptableObject(this);
+        scriptPath = AssetDatabase.GetAssetPath(ms).Replace("SnailMarker3AnimationCreatorEditor.cs", "");
+        rootPath = scriptPath.Replace("AnimationGenerator/Editor/", "");
+        generatedPath = rootPath + "Generated/" + avatarTransform.name;
+        templatesPath = rootPath + "Templates";
 
+        scriptPath = scriptPath.Replace("/", "\\");
+        rootPath = rootPath.Replace("/", "\\");
+        generatedPath = generatedPath.Replace("/", "\\");
+        templatesPath = templatesPath.Replace("/", "\\");
+    }
     private string generatedAssetPath(string name)
     {
-        return Path.Combine("Assets\\Snail\\Marker3.0\\Generated", avatarTransform.name, name);
-    }
-    private string generatedFilePath(string name)
-    {
-        return Path.Combine(generatedFolderPath(), name);
-    }
-    private string generatedFolderPath()
-    {
-        return Path.Combine(Application.dataPath, "Snail\\Marker3.0\\Generated\\", avatarDescriptor.name);
+        return Path.Combine( generatedPath, name);
     }
     private string templateAssetPath(string name)
     {
-        return Path.Combine("Assets\\Snail\\Marker3.0\\Templates", name);
+        return Path.Combine( templatesPath, name);
     }
     private string generatedGestureName()
     {
@@ -306,7 +323,7 @@ public class SnailMarker3AnimationCreatorEditor : Editor
     private Object CreateAsset(Object asset, string name)
     {
         ensureGeneratedDirectory();
-        string diskFile = generatedFilePath(name);
+        string diskFile = generatedAssetPath(name);
         if (File.Exists(diskFile))
         {
             if (!EditorUtility.DisplayDialog("Existing files", "Overwrite\n" + diskFile, "Yes", "No"))
@@ -332,9 +349,9 @@ public class SnailMarker3AnimationCreatorEditor : Editor
 
     private void ensureGeneratedDirectory()
     {
-        if (!Directory.Exists(generatedFolderPath()))
+        if (!Directory.Exists(generatedPath))
         {
-            Directory.CreateDirectory(generatedFolderPath());
+            Directory.CreateDirectory(generatedPath);
         }
     }
 
@@ -347,7 +364,7 @@ public class SnailMarker3AnimationCreatorEditor : Editor
     /*******************************
     * Animations
     *******************************/
-                private void ConfigureAnimationController()
+    private void ConfigureAnimationController()
     {
         //Check and build the animation controller:
         CreateParameters();
@@ -370,6 +387,7 @@ public class SnailMarker3AnimationCreatorEditor : Editor
         {
             fxController.AddParameter(generatedGestureName(), AnimatorControllerParameterType.Int);
         }
+
         //find or create markerToggle
         bool toggleMarkerParamFound = false;
         for (int i = 0; i < fxController.parameters.Length; i++)
@@ -381,7 +399,7 @@ public class SnailMarker3AnimationCreatorEditor : Editor
         }
         if (!toggleMarkerParamFound)
         {
-            fxController.AddParameter("ToggleMarker", AnimatorControllerParameterType.Int);
+            fxController.AddParameter("ToggleMarker", AnimatorControllerParameterType.Bool);
         }
     }
     private AnimatorControllerLayer FindLayer(string name)
@@ -395,6 +413,15 @@ public class SnailMarker3AnimationCreatorEditor : Editor
             }
         }
         return layer;
+    }
+
+    private void SetGestureTransitionDefaults(AnimatorStateTransition transition)
+    {
+        transition.hasExitTime = false;
+        transition.hasFixedDuration = false;
+        transition.duration = .01f;
+        transition.interruptionSource = TransitionInterruptionSource.Destination;
+        transition.canTransitionToSelf = false;
     }
     private void CreateGestureLayer()
     {
@@ -414,33 +441,38 @@ public class SnailMarker3AnimationCreatorEditor : Editor
             AnimatorState idleState = layer.stateMachine.AddState("Idle");
             AnimatorState activateMarkerState = layer.stateMachine.AddState("Activate Marker");
             AnimatorState eraseAllState = layer.stateMachine.AddState("Erase All");
+
+            //set the idle transition
             for (int i = 0; i < 8; i++)
             {
-                AnimatorStateTransition transition;
                 if (i == (int)activateGesture)
                 {
+                    AnimatorStateTransition transition;
                     transition = layer.stateMachine.AddAnyStateTransition(activateMarkerState);
+                    SetGestureTransitionDefaults(transition);
+                    transition.AddCondition(AnimatorConditionMode.Equals, i, generatedGestureName());
                 }
                 else if (i == (int)resetGesture)
                 {
+                    AnimatorStateTransition transition;
                     transition = layer.stateMachine.AddAnyStateTransition(eraseAllState);
+                    SetGestureTransitionDefaults(transition);
+                    transition.AddCondition(AnimatorConditionMode.Equals, i, generatedGestureName());
                 }
                 else
                 {
+                    AnimatorStateTransition transition;
                     transition = layer.stateMachine.AddAnyStateTransition(idleState);
+                    SetGestureTransitionDefaults(transition);
+                    transition.AddCondition(AnimatorConditionMode.Equals, i, generatedGestureName());
                 }
-                transition.AddCondition(AnimatorConditionMode.Equals, i, generatedGestureName());
-                transition.hasExitTime = false;
-                transition.hasFixedDuration = false;
-                transition.duration = .1f;
-                transition.interruptionSource = TransitionInterruptionSource.Destination;
-                transition.canTransitionToSelf = false;
-
             }
 
             WriteGestureAnimations();
-            activateMarkerState.motion = drawClip;
-            eraseAllState.motion = eraseClip;
+            idleState.motion = idleClip;
+            activateMarkerState.motion = drawOnClip;
+            eraseAllState.motion = eraseOnClip;
+
             fxController.AddLayer(layer);
         }
     }
@@ -466,7 +498,7 @@ public class SnailMarker3AnimationCreatorEditor : Editor
             AnimatorState MarkerOnState = layer.stateMachine.AddState("MarkerOn");
 
             AnimatorStateTransition transition = MarkerOffState.AddTransition(MarkerOnState);
-            transition.AddCondition(AnimatorConditionMode.Equals, 1, "ToggleMarker");
+            transition.AddCondition(AnimatorConditionMode.If, 0, "ToggleMarker");
             transition.hasExitTime = false;
             transition.hasFixedDuration = false;
             transition.duration = 0;
@@ -474,7 +506,7 @@ public class SnailMarker3AnimationCreatorEditor : Editor
             transition.canTransitionToSelf = false;
 
             transition = MarkerOnState.AddTransition(MarkerOffState);
-            transition.AddCondition(AnimatorConditionMode.Equals, 0, "ToggleMarker");
+            transition.AddCondition(AnimatorConditionMode.IfNot, 0, "ToggleMarker");
             transition.hasExitTime = false;
             transition.hasFixedDuration = false;
             transition.duration = 0;
@@ -509,20 +541,28 @@ public class SnailMarker3AnimationCreatorEditor : Editor
     {
         float keyframe = 1F / 60;
 
-        // Curve that sets a property to 1 over the course of 1 frame.
-        AnimationCurve zeroCurve = AnimationCurve.Linear(0, 0, keyframe, 0);
-        AnimationClip erase = new AnimationClip();
-        erase.SetCurve(animationPath, typeof(TrailRenderer), "m_Time", zeroCurve);
-        CreateAsset(erase, "EraseAll.anim");
-
         // Curve that sets a property to 0 over the course of 1 frame.
-        AnimationCurve drawCurve = AnimationCurve.Linear(0, 1, keyframe, 1);
-        AnimationClip draw = new AnimationClip();
-        draw.SetCurve(animationPath, typeof(TrailRenderer), "m_Emitting", drawCurve);
-        CreateAsset(draw, "Drawing.anim");
+        AnimationCurve eraseOnCurve = AnimationCurve.Linear(0, 0, keyframe, 0);
+        AnimationClip eraseOn = new AnimationClip();
+        eraseOn.SetCurve(animationPath, typeof(TrailRenderer), "m_Time", eraseOnCurve);
+        CreateAsset(eraseOn, "EraseAll.anim");
 
-        eraseClip = erase;
-        drawClip = draw;
+        // Curve that sets a property to 1 over the course of 1 frame.
+        AnimationCurve drawOnCurve = AnimationCurve.Linear(0, 1, keyframe, 1);
+        AnimationClip drawOn = new AnimationClip();
+        drawOn.SetCurve(animationPath, typeof(TrailRenderer), "m_Emitting", drawOnCurve);
+        CreateAsset(drawOn, "DrawingOn.anim");
+
+        AnimationCurve drawOffCurve = AnimationCurve.Linear(0, 0, keyframe, 0);
+        AnimationCurve eraseOffCurve = AnimationCurve.Linear(0, 120, keyframe, 120);
+        AnimationClip idle = new AnimationClip();
+        idle.SetCurve(animationPath, typeof(TrailRenderer), "m_Emitting", drawOffCurve);
+        idle.SetCurve(animationPath, typeof(TrailRenderer), "m_Time", eraseOffCurve);
+        CreateAsset(idle, "Idle.anim");
+
+        eraseOnClip = eraseOn;
+        drawOnClip = drawOn;
+        idleClip = idle;
     }
     /************************
         End Animations
