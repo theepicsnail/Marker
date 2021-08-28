@@ -40,6 +40,7 @@ public class SnailMarker3AnimationCreatorEditor : Editor
     private Hand hand = Hand.Right;
     private VRCGesture activateGesture = VRCGesture.FingerPoint;
     private VRCGesture resetGesture = VRCGesture.HandOpen;
+    GUIStyle versionStyle;
 
     public void OnEnable()
     {
@@ -48,6 +49,9 @@ public class SnailMarker3AnimationCreatorEditor : Editor
 
         if (!findAvatarAndAnimationPath(obj.transform)) return;
         findComponents();
+        versionStyle = GUIStyle.none;
+        versionStyle.padding = new RectOffset(10, 10, 10, 10);
+        versionStyle.alignment = TextAnchor.MiddleCenter;
     }
     public override void OnInspectorGUI()
     {
@@ -76,6 +80,19 @@ public class SnailMarker3AnimationCreatorEditor : Editor
             GUILayout.Label("Select a location for the marker:");
             ShowMenuFoldout(avatarDescriptor.expressionsMenu, "Expressions Menu");
         }
+
+        
+        GUILayout.TextArea("Snail Marker Generator Version 3.1.2 (c) 2021 Snail & Skuld", versionStyle);
+    }
+
+    private int GetParameterSize()
+    {
+        int size = 0;
+        for (int i = 0; i < expressionParams.parameters.Length; i++)
+        {
+            size += VRCExpressionParameters.TypeCost(expressionParams.parameters[i].valueType);
+        }
+        return size;
     }
 
     private HashSet<VRCExpressionsMenu> expandedMenus = new HashSet<VRCExpressionsMenu>();
@@ -97,11 +114,7 @@ public class SnailMarker3AnimationCreatorEditor : Editor
         GUILayout.BeginHorizontal();
         GUILayout.Space(EditorGUI.indentLevel * 17);
 
-        int size = 0;
-        for (int i = 0; i < expressionParams.parameters.Length; i++)
-        {
-            size += VRCExpressionParameters.TypeCost(expressionParams.parameters[i].valueType);
-        }
+        int size = GetParameterSize();       
 
         if ( menu.controls.Count < expressionParams.parameters.Length )
         {
@@ -176,7 +189,23 @@ public class SnailMarker3AnimationCreatorEditor : Editor
                 return;
             }
         }
-        Debug.LogError("Could not create Avatar 3.0 parameter. You may be out of paramters.");
+        int size = GetParameterSize();
+        if ( size < 128)
+        {
+            int n = expressionParams.parameters.Length;
+            VRCExpressionParameters.Parameter[] newParams = new VRCExpressionParameters.Parameter[n + 1];
+            for ( int i = 0; i < n; i++)
+            {
+                newParams[i] = expressionParams.parameters[i];
+            }
+            newParams[n] = new VRCExpressionParameters.Parameter();
+            newParams[n].name = "ToggleMarker";
+            newParams[n].valueType = VRCExpressionParameters.ValueType.Bool;
+            expressionParams.parameters = newParams;
+            EditorUtility.SetDirty(expressionParams);
+            return;
+        }
+        Debug.LogError("Could not create Avatar 3.0 parameter. You may be out of paramters, try creating it manually.");
         return;
     }
     private void AddMarkerToMenu(ref VRCExpressionsMenu menu)
@@ -425,7 +454,7 @@ public class SnailMarker3AnimationCreatorEditor : Editor
     }
     private void CreateGestureLayer()
     {
-        string layerName = generatedGestureName() + "Maker";
+        string layerName = generatedGestureName() + "Marker";
         AnimatorControllerLayer layer = FindLayer(layerName);
         if (layer == null)
         {
